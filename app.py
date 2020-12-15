@@ -44,13 +44,14 @@ def register_new_user():
             email=form.email.data,
             first_name=form.first_name.data,
             last_name=form.last_name.data,
-            )
+        )
 
         db.session.add(user)
         db.session.commit()
+        session["username"] = user.username
 
         # on successful login, redirect user to logged in landing page
-        return redirect("/secret")
+        return redirect(f"/users/{user.username}")
     else:
         return render_template("register_user.html", form=form)
 
@@ -63,4 +64,56 @@ def login_user():
         POST: Process the login form, ensuring the user is authenticated and
         going to /secret if so.
     """
-    pass
+
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+
+        user = User.authenticate(username, password)
+
+        if user:
+            session["username"] = user.username  # keep logged in
+            return redirect(f"/users/{user.username}")
+
+        else:
+            form.username.errors = ["Bad username/password"]
+            return render_template("login_user.html", form=form)
+    else:
+        return render_template("login_user.html", form=form)
+
+
+@app.route("/users/<username>")
+def show_user(username):
+    """ Display a template the shows information 
+    about that user (everything except for their password)
+    """
+
+    # is there any user logged into the session
+    # is the logged in username = username in the URL
+
+    if "username" not in session:
+        flash("You are not authorized to view this page.")      
+
+        return redirect("/login")
+    elif username != session["username"]:
+        flash("You are not authorized to access another user's page. We got yo numba!")      
+
+        logged_in_user = session["username"]
+
+        return redirect(f"/users/{logged_in_user}")
+    else:
+        user = User.query.get_or_404(username)
+        return render_template("user.html", user=user)
+
+
+@app.route("/logout")
+def logout_user():
+    """ Clear any information from the session 
+    and redirect to homepage 
+    """
+
+    session.pop("username")
+
+    return redirect("/")

@@ -3,25 +3,8 @@
 {% block content %}
 
 <form action="/register" id="new_user_form" method="POST">
-  {{ form.hidden_tag() }}
-
- {% for field in form
-    if field.widget.input_type != 'hidden' %}
-
-    <div>
-      {{ field.label }}
-      {{ field }}
-
-      {% for error in field.errors %}
-        {{ error }}
-      {% endfor %}
-    </div>
-
-
-
-    {% endfor %}
-
-  <button class="btn btn-primary" type="submit">Submit</button>
+  {% include "_form.html" %}
+  <button class="btn btn-primary" type="submit">Register</button>
 </form>
 
 {% endblock %}

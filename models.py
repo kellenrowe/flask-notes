@@ -20,7 +20,6 @@ class User(db.Model):
 
     username = db.Column(db.String(20),
                          primary_key=True,
-                         autoincrement=True,
                          unique=True)
 
     password = db.Column(db.Text,
@@ -36,7 +35,13 @@ class User(db.Model):
     last_name = db.Column(db.String(30),
                           nullable=False)
 
-    # start_register
+
+    @property
+    def full_name(self):
+        """ Return the user's full name """
+
+        return f"{self.first_name} {self.last_name}"
+
     @classmethod
     def register(cls, username, password, email, first_name, last_name):
         """Register user w/hashed password & return user."""
@@ -51,4 +56,17 @@ class User(db.Model):
                    last_name=last_name
                    )
 
-    # end_register
+    @classmethod
+    def authenticate(cls, username, password):
+        """Validate that user exists & password is correct.
+
+        Return user if valid; else return False.
+        """
+
+        u = User.query.filter_by(username=username).first()
+
+        if u and bcrypt.check_password_hash(u.password, password):
+            # return user instance
+            return u
+        else:
+            return False
