@@ -1,7 +1,9 @@
 from flask import Flask, render_template, redirect, session, flash
 from flask_debugtoolbar import DebugToolbarExtension
-from models import connect_db, db, User
-from forms import RegisterForm, LoginForm
+from models import connect_db, db, User, Note
+from forms import RegisterForm, LoginForm, NoteForm, DeleteForm
+
+CURRENT_USER = "username"
 
 app = Flask(__name__)
 
@@ -15,6 +17,21 @@ db.create_all()
 
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 toolbar = DebugToolbarExtension(app)
+
+
+# def authentorize_user(username):
+#     """ helper function to check authenticity and authorization of current user
+#     """
+#     if CURRENT_USER not in session:
+#         flash("You are not authorized to view this page.")      
+#         return redirect("/login")
+
+#     elif username != session[CURRENT_USER]:
+#         flash("You are not authorized to access another user's page.")      
+#         logged_in_user = session[CURRENT_USER]
+#         return redirect(f"/users/{logged_in_user}")
+
+#     return True
 
 
 @app.route("/")
@@ -48,7 +65,7 @@ def register_new_user():
 
         db.session.add(user)
         db.session.commit()
-        session["username"] = user.username
+        session[CURRENT_USER] = user.username
 
         # on successful login, redirect user to logged in landing page
         return redirect(f"/users/{user.username}")
@@ -64,6 +81,7 @@ def login_user():
         POST: Process the login form, ensuring the user is authenticated and
         going to /secret if so.
     """
+    ############## if logged in, redirect to user page ######################
 
     form = LoginForm()
 
@@ -74,35 +92,33 @@ def login_user():
         user = User.authenticate(username, password)
 
         if user:
-            session["username"] = user.username  # keep logged in
+            session[CURRENT_USER] = user.username  # keep logged in
             return redirect(f"/users/{user.username}")
 
         else:
             form.username.errors = ["Bad username/password"]
-            return render_template("login_user.html", form=form)
-    else:
-        return render_template("login_user.html", form=form)
+
+    return render_template("login_user.html", form=form)
 
 
 @app.route("/users/<username>")
 def show_user(username):
-    """ Display a template the shows information 
-    about that user (everything except for their password)
+    """ Display a template the shows information
+        about that user (everything except for their password)
     """
 
     # is there any user logged into the session
     # is the logged in username = username in the URL
 
-    if "username" not in session:
+    if CURRENT_USER not in session:
         flash("You are not authorized to view this page.")      
-
         return redirect("/login")
-    elif username != session["username"]:
-        flash("You are not authorized to access another user's page. We got yo numba!")      
 
-        logged_in_user = session["username"]
-
+    elif username != session[CURRENT_USER]:
+        flash("You are not authorized to access another user's page.")      
+        logged_in_user = session[CURRENT_USER]
         return redirect(f"/users/{logged_in_user}")
+
     else:
         user = User.query.get_or_404(username)
         return render_template("user.html", user=user)
@@ -110,10 +126,92 @@ def show_user(username):
 
 @app.route("/logout")
 def logout_user():
-    """ Clear any information from the session 
-    and redirect to homepage 
+    """ Clear any information from the session
+        and redirect to homepage
     """
 
-    session.pop("username")
-
+    session.pop(CURRENT_USER)
     return redirect("/")
+
+
+@app.route("/users/<username>/notes/add", methods=["GET", "POST"])
+def add_notes_form(username):
+    """ GET: Display a form to add notes.
+        POST: Add a new note and redirect to /users/<username>
+    """
+
+    if CURRENT_USER not in session:
+        flash("You are not authorized to view this page.")     
+        return redirect("/login")
+
+    elif username != session[CURRENT_USER]:
+        flash("You are not authorized to access another user's page.")
+        logged_in_user = session[CURRENT_USER]
+        return redirect(f"/users/{logged_in_user}")
+
+    form = NoteForm()
+    user = User.query.get_or_404(username)
+
+    if form.validate_on_submit():
+        title = form.title.data
+        content = form.content.data
+        note = Note(title=title, content=content)
+        user.notes.append(note)
+
+        db.session.commit()
+
+        return redirect(f'/users/{username}')
+    else:
+        return render_template("new_note.html", user=user, form=form)
+
+
+@app.route("/notes/<int:note_id>/update", methods=["GET", "POST"])
+def update_notes_form(note_id):
+    """ GET: Display a form to update notes.
+        POST: update note and redirect to /users/<username>
+    """
+    note = Note.query.get_or_404(note_id)
+    username = note.user.username
+    form = NoteForm(obj=note)
+# *************** put this if/else in a helper function ***********************
+    if CURRENT_USER not in session:
+        flash("You are not authorized to view this page.")     
+        return redirect("/login")
+
+    elif username != session[CURRENT_USER]:
+        flash("You are not authorized to access another user's page.")
+        logged_in_user = session[CURRENT_USER]
+        return redirect(f"/users/{logged_in_user}")
+# *************** put this if/else in a helper function ***********************
+    if form.validate_on_submit():
+        note.title = form.title.data
+        note.content = form.content.data
+
+        db.session.commit()
+
+        return redirect(f'/users/{username}')
+    else:
+        return render_template("update_note.html", form=form, note=note)
+
+
+@app.route("/notes/<int:note_id>/delete", methods=["POST"])
+def delete_note(note_id):
+    """ Delete note and redirect to /users/<username>
+    """
+    note = Note.query.get_or_404(note_id)
+    username = note.user.username
+# *************** put this if/else in a helper function ***********************
+    if CURRENT_USER not in session:
+        flash("You are not authorized to view this page.")
+        return redirect("/login")
+
+    elif username != session[CURRENT_USER]:
+        flash("You are not authorized to access another user's page.")
+        logged_in_user = session[CURRENT_USER]
+        return redirect(f"/users/{logged_in_user}")
+# *************** put this if/else in a helper function ***********************
+
+    db.session.delete(note)
+    db.session.commit()
+
+    return redirect(f'/users/{username}')

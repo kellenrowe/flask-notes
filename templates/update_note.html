@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<form action="/notes/{{ note.id }}/update" 
+      id="update_note_form" 
+      method="POST">
+
+  {% include "_form.html" %}
+
+  <button class="btn btn-primary" type="submit">Update Note</button>
+</form>
+
+{% endblock %}

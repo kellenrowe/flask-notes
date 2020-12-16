@@ -2,10 +2,24 @@
 
 {% block content %}
 
-<h1>Profile for {{user.full_name}}</h1>
+    <h1>Profile for {{user.full_name}}</h1>
 
-<p>{{user.username}}</p>
-<p>{{user.email}}</p>
+    <span><b>Username: </b>{{user.username}}</span> <br>
+    <span><b>Email: </b>{{user.email}}</span> <br> <br>
 
-
+    <h3>Notes</h3>
+    <a  class="btn btn-secondary btn-sm" 
+        href="/users/{{ user.username }}/notes/add">Add Note</a>
+        <ul>
+            {% for note in user.notes %}
+                <li>
+                    <a class="btn" href="/notes/{{ note.id }}/update">Edit</a>
+                    <form action="/notes/{{ note.id }}/delete" method="POST">
+                        <button class="btn">Trash</button>
+                    </form>
+                    <span><b>{{ note.title }}: </b>{{ note.content }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </form>
 {% endblock %}
