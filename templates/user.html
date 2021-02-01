@@ -13,9 +13,13 @@
         <ul>
             {% for note in user.notes %}
                 <li>
-                    <a class="btn" href="/notes/{{ note.id }}/update">Edit</a>
-                    <form action="/notes/{{ note.id }}/delete" method="POST">
-                        <button class="btn">Trash</button>
+                    <a class="btn btn-sm btn-secondary" 
+                       href="/notes/{{ note.id }}/update">Edit</a>
+
+                    <form action="/notes/{{ note.id }}/delete" 
+                          method="POST">
+
+                        <button class="btn btn-sm btn-secondary">Trash</button>
                     </form>
                     <span><b>{{ note.title }}: </b>{{ note.content }}</span>
                 </li>
